@@ -9,6 +9,9 @@ Unreleased
 
 * Fix a bug in Corda 4.0 that combined commands in ``TransactionBuilder`` if they only differed by the signers list.  The behaviour is now consistent with prior Corda releases.
 
+* :doc:`design/data-model-upgrades/package-namespace-ownership` configurations can be now be set as described in
+  :ref:`node_package_namespace_ownership`, when using the Cordformation plugin version 4.0.43.
+
 .. _changelog_v4.0:
 
 Version 4.0
