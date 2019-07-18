@@ -99,7 +99,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     @DeleteForDJVM
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
-        return toLedgerTransactionInternal(
+        return services.specialise(
+            toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRefAsSerialized = { resolveStateRefBinaryComponent(it, services) },
@@ -107,17 +108,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersService.defaultHash
                     services.networkParametersService.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) },
                 isAttachmentTrusted = { isAttachmentTrusted(it, services.attachments) }
+            )
         )
-    }
-
-    // Helper for deprecated toLedgerTransaction
-    // TODO: revisit once Deterministic JVM code updated
-    private val missingAttachment: Attachment by lazy {
-        object : AbstractAttachment({ byteArrayOf() }, DEPLOYED_CORDAPP_UPLOADER ) {
-            override val id: SecureHash get() = throw UnsupportedOperationException()
-        }
     }
 
     /**
@@ -128,7 +121,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
      */
-    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
+    @Deprecated("Use toLedgerTransaction(ServicesForResolution) instead")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
@@ -142,8 +135,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
-                // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { resolveAttachment(it.txhash) ?: missingAttachment },
                 { isAttachmentTrusted(it, null) }
         )
     }
@@ -160,7 +151,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { resolveAttachment(it.txhash) ?: missingAttachment },
                 { true } // Any attachment loaded through the DJVM should be trusted
         )
     }
@@ -170,7 +160,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment,
             isAttachmentTrusted: (Attachment) -> Boolean
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.

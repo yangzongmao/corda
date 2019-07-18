@@ -1,11 +1,9 @@
 package net.corda.core.internal
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.PartialMerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.node.NetworkParameters
 import net.corda.core.transactions.ComponentGroup
 import net.corda.core.transactions.LedgerTransaction

@@ -16,8 +16,6 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
-import java.io.NotSerializableException
-import java.lang.Exception
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -70,8 +68,8 @@ open class TransactionBuilder(
         private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
 
-        private val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
-        private val FQCP = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
+        private const val ID_PATTERN = "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*"
+        private val FQCP: Pattern = Pattern.compile("$ID_PATTERN(/$ID_PATTERN)+")
         private fun isValidJavaClass(identifier: String) = FQCP.matcher(identifier).matches()
     }
 
