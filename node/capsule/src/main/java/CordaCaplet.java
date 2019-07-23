@@ -6,11 +6,17 @@ import com.typesafe.config.*;
 import sun.misc.Signal;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
 public class CordaCaplet extends Capsule {
+    private static final int BUFFER_SIZE = 16384;
+    private static final int EOF = -1;
 
     private Config nodeConfig = null;
     private String baseDir = null;
@@ -78,10 +84,40 @@ public class CordaCaplet extends Capsule {
         return null;
     }
 
+    private void installDJVM() {
+        File djvmDir = new File(baseDir, "djvm");
+        if (!djvmDir.mkdir() && !djvmDir.isDirectory()) {
+            log(LOG_VERBOSE, "DJVM directory could not be created");
+        } else {
+            File deterministicRt = new File(djvmDir, "deterministic-rt.jar");
+            if (!deterministicRt.exists()) {
+                URL rtURL = getClass().getResource("/META-INF/djvm/deterministic-rt.jar");
+                if (rtURL == null) {
+                    log(LOG_VERBOSE, "deterministic-rt.jar missing from Corda capsule");
+                } else {
+                    byte[] buffer = new byte[BUFFER_SIZE];
+                    try (
+                        FileOutputStream output = new FileOutputStream(deterministicRt);
+                        InputStream input = rtURL.openStream()
+                    ) {
+                        int bytesRead;
+                        while ((bytesRead = input.read(buffer)) != EOF) {
+                            output.write(buffer, 0, bytesRead);
+                        }
+                    } catch (IOException e) {
+                        deterministicRt.delete();
+                        log(LOG_VERBOSE, e);
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
         checkJavaVersion();
         nodeConfig = parseConfigFile(args);
+        installDJVM();
         return super.prelaunch(jvmArgs, args);
     }
 

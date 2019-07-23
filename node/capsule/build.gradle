@@ -8,6 +8,8 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda standalone node'
 
+evaluationDependsOn(':node')
+
 configurations {
     runtimeArtifacts.extendsFrom runtimeClasspath
     capsuleRuntime
@@ -46,6 +48,12 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
     with jar
+
+    into('META-INF/djvm') {
+        from project(':node').configurations['jdkRt'].singleFile
+        rename 'deterministic-rt(.*)', 'deterministic-rt.jar'
+        fileMode = 0444
+    }
 
     capsuleManifest {
         applicationVersion = corda_release_version
